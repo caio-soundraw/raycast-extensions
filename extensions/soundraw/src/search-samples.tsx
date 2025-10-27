@@ -75,7 +75,7 @@ function SampleItem({ sample }: { sample: Sample }) {
   const playAudio = async (audioUrl: string) => {
     try {
       console.log("Playing audio:", audioUrl);
-      
+
       // If this sample is already playing, stop it instead
       if (globalPlayingState.sampleId === sample.id) {
         await stopAudio();
@@ -104,7 +104,7 @@ function SampleItem({ sample }: { sample: Sample }) {
       const tempFilePath = `/tmp/${tempFileName}`;
 
       fs.writeFileSync(tempFilePath, buffer);
-      
+
       // Update global state with temp path
       globalPlayingState.tempPath = tempFilePath;
 
@@ -120,12 +120,12 @@ function SampleItem({ sample }: { sample: Sample }) {
       await runAppleScript(appleScript);
     } catch (error) {
       console.error("Failed to play audio:", error);
-      
+
       // Update global state to stop playing
       globalPlayingState.sampleId = null;
       globalPlayingState.tempPath = undefined;
       notifyListeners();
-      
+
       await showToast({
         title: "Playback Failed",
         message: error instanceof Error ? error.message : "Failed to play audio",
@@ -137,11 +137,11 @@ function SampleItem({ sample }: { sample: Sample }) {
   const stopAudio = async () => {
     try {
       const wasPlaying = globalPlayingState.sampleId !== null;
-      
+
       if (wasPlaying) {
         console.log("Stopping audio");
       }
-      
+
       // Use AppleScript to stop QuickTime Player
       const stopScript = `tell application "QuickTime Player"
         if (count of documents) > 0 then
@@ -158,7 +158,7 @@ function SampleItem({ sample }: { sample: Sample }) {
       globalPlayingState.sampleId = null;
       globalPlayingState.tempPath = undefined;
       notifyListeners();
-      
+
       if (wasPlaying) {
         console.log("Audio stopped successfully");
       }
