@@ -5,6 +5,8 @@
   "description": "Interact with Soundraw to increase your music creation productivity",
   "icon": "soundraw.png",
   "author": "caio-soundraw",
+  "owner": "soundraw",
+  "access": "public",
   "platforms": [
     "macOS"
   ],
