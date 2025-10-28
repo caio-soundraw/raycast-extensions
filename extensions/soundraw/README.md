@@ -4,7 +4,8 @@ Interact with [Soundraw](https://soundraw.io), the 100% Copyright-Safe AI Music 
 
 ---
 
-**Please note:**  
+**ℹ️ Please note**  
+
 The Soundraw Raycast extension is currently in a closed beta. At this time, users cannot self-serve an API token. If you are a paid [Soundraw](https://soundraw.io) user and would like early access or have questions regarding this extension, please contact our [customer support team](https://3jz3x.channel.io/workflows/704128).
 
 ---
