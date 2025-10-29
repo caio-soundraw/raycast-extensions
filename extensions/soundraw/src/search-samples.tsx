@@ -94,7 +94,7 @@ function SamplesList({
 
           // Download and cache if needed (uses cache if available)
           const { path } = await getOrDownloadFile(sample.sample, "/tmp", sample.name);
-          
+
           // Verify file was created successfully
           if (fs.existsSync(path)) {
             const stats = fs.statSync(path);
@@ -118,7 +118,7 @@ function SamplesList({
       });
 
       const results = await Promise.allSettled(preparePromises);
-      
+
       if (cancelled) {
         return;
       }
@@ -195,9 +195,7 @@ function SamplesList({
           }
         />
       ) : (
-        samples.map((sample) => (
-          <SampleItem key={sample.id} sample={sample} filePath={filePaths[sample.id] || null} />
-        ))
+        samples.map((sample) => <SampleItem key={sample.id} sample={sample} filePath={filePaths[sample.id] || null} />)
       )}
     </List>
   );
@@ -218,13 +216,9 @@ export default function Command() {
   const [samples, setSamples] = useState<Sample[]>([]);
 
   // Fetch available genres using useCachedPromise (caches across command runs)
-  const { data: genresData, isLoading: isLoadingGenres } = useCachedPromise(
-    () => getAvailableGenres(),
-    [],
-    {
-      initialData: { genres: {}, total_count: 0 },
-    },
-  );
+  const { data: genresData, isLoading: isLoadingGenres } = useCachedPromise(() => getAvailableGenres(), [], {
+    initialData: { genres: {}, total_count: 0 },
+  });
 
   const availableGenres = genresData?.genres || {};
 
