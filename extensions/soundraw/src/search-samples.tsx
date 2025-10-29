@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Form, ActionPanel, Action, showToast, List, Detail, Icon, Toast, showHUD, Keyboard } from "@raycast/api";
+import { Form, ActionPanel, Action, showToast, List, Icon, Toast, showHUD, Keyboard } from "@raycast/api";
 import * as fs from "fs";
 import { execSync } from "child_process";
 import { useForm, runAppleScript } from "@raycast/utils";
