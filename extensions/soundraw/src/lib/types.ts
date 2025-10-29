@@ -18,8 +18,6 @@ export type Sample = {
 
 export type SearchSamplesRequest = {
   genres?: string[];
-  page?: number;
-  limit?: number;
 };
 
 export type SearchSamplesResponse = {

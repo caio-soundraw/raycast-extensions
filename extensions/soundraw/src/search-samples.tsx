@@ -4,7 +4,7 @@ import * as fs from "fs";
 import { execSync } from "child_process";
 import { useForm, runAppleScript } from "@raycast/utils";
 import { searchSamples, getAvailableGenres, SoundrawAPIError } from "./lib/soundraw";
-import { SearchSamplesRequest, Sample } from "./lib/types";
+import { Sample } from "./lib/types";
 
 type Values = {
   genres: string[];
@@ -320,12 +320,7 @@ export default function Command() {
       setSelectedGenres(genres || []);
 
       try {
-        const searchParams: SearchSamplesRequest = {
-          genres: genres || [],
-          page: 1,
-          limit: 20,
-        };
-
+        const searchParams = { genres: genres || [] };
         const response = await searchSamples(searchParams);
         setSamples(response.samples);
       } catch (error) {

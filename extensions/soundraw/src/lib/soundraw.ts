@@ -49,18 +49,7 @@ export async function searchSamples(params: SearchSamplesRequest): Promise<Searc
   const queryParams = new URLSearchParams();
 
   if (params.genres && params.genres.length > 0) {
-    // Send genres as array parameters
-    params.genres.forEach((genre) => {
-      queryParams.append("genres[]", genre);
-    });
-  }
-
-  if (params.page) {
-    queryParams.append("page", params.page.toString());
-  }
-
-  if (params.limit) {
-    queryParams.append("limit", params.limit.toString());
+    params.genres.forEach((genre) => queryParams.append("genres[]", genre));
   }
 
   const endpoint = `/beats${queryParams.toString() ? `?${queryParams.toString()}` : ""}`;
