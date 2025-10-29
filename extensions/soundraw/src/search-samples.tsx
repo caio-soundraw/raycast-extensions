@@ -27,8 +27,7 @@ function SampleItem({ sample, filePath }: { sample: Sample; filePath: string | n
     <List.Item
       id={sample.id}
       key={sample.id}
-      title={sample.name}
-      subtitle={sample.bpm ? `${sample.bpm} BPM` : ""}
+      title={sample.name.replace(/\s+\d+$/, "")}
       icon={isDownloading ? Icon.Clock : isPlaying ? Icon.SpeakerOn : Icon.Music}
       accessories={[...(sample.bpm ? [{ text: `${sample.bpm} BPM`, icon: Icon.Clock }] : [])]}
       quickLook={verifiedFilePath ? { path: verifiedFilePath } : undefined}
@@ -240,7 +239,14 @@ export default function Command() {
       try {
         const searchParams = { genres: genres || [] };
         const response = await searchSamples(searchParams);
-        setSamples(response.samples);
+
+        // Small hack to make sample names more unique by including BPM
+        const uniqueSamples = response.samples.map((sample) => ({
+          ...sample,
+          name: sample.bpm ? `${sample.name} ${sample.bpm}` : sample.name,
+        }));
+
+        setSamples(uniqueSamples);
       } catch (error) {
         const errorMessage =
           error instanceof SoundrawAPIError ? error.message : "Failed to search samples. Please try again.";
