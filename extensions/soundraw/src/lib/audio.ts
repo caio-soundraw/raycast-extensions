@@ -52,27 +52,29 @@ class PlaybackStateManager {
     const isNowPlaying = sampleId !== null;
     this.sampleId = sampleId;
     this.tempPath = tempPath;
-    
+
     if (isNowPlaying) {
       console.debug(`[audio] playback state: playing sampleId=${sampleId}, tempPath=${tempPath}`);
     } else if (wasPlaying) {
       console.debug(`[audio] playback state: stopped (was playing sampleId=${previousSampleId})`);
     }
-    
+
     this.notifyListeners();
   }
 
   // Serialize playback operations to prevent race conditions
   async enqueuePlayback<T>(operation: () => Promise<T>): Promise<T> {
     console.debug(`[audio] enqueueing playback operation`);
-    const operationPromise = this.playbackQueue.then(() => {
-      console.debug(`[audio] executing playback operation`);
-      return operation();
-    }).catch((error) => {
-      console.debug(`[audio] playback operation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
-      // Ignore errors in queue chain
-      return undefined as unknown as T;
-    });
+    const operationPromise = this.playbackQueue
+      .then(() => {
+        console.debug(`[audio] executing playback operation`);
+        return operation();
+      })
+      .catch((error) => {
+        console.debug(`[audio] playback operation failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+        // Ignore errors in queue chain
+        return undefined as unknown as T;
+      });
     this.playbackQueue = operationPromise.then(() => {
       console.debug(`[audio] playback operation completed`);
       return undefined;
@@ -88,7 +90,9 @@ class PlaybackStateManager {
         this.playbackProcess.kill("SIGTERM");
         this.playbackProcess = null;
       } catch (error) {
-        console.debug(`[audio] failed to kill playback process: ${error instanceof Error ? error.message : "Unknown error"}`);
+        console.debug(
+          `[audio] failed to kill playback process: ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
       }
     }
 
@@ -102,7 +106,9 @@ class PlaybackStateManager {
           console.debug(`[audio] temp file does not exist: ${this.tempPath}`);
         }
       } catch (error) {
-        console.debug(`[audio] failed to delete temp file: ${this.tempPath} - ${error instanceof Error ? error.message : "Unknown error"}`);
+        console.debug(
+          `[audio] failed to delete temp file: ${this.tempPath} - ${error instanceof Error ? error.message : "Unknown error"}`,
+        );
       }
       this.tempPath = undefined;
     }
@@ -130,9 +136,9 @@ class PlaybackStateManager {
  */
 export async function playAudio(audioUrl: string, sampleId: string, sampleName: string): Promise<void> {
   const manager = PlaybackStateManager.getInstance();
-  
+
   console.debug(`[audio] playAudio requested: sampleId=${sampleId}, url=${audioUrl}, name=${sampleName}`);
-  
+
   await manager.enqueuePlayback(async () => {
     // Stop any currently playing audio first
     const currentPlaying = manager.getCurrentSampleId();
@@ -152,25 +158,25 @@ export async function playAudio(audioUrl: string, sampleId: string, sampleName: 
       if (!fs.existsSync(filePath)) {
         throw new Error(`File does not exist: ${filePath}`);
       }
-      
+
       const stats = fs.statSync(filePath);
       if (stats.size === 0) {
         throw new Error(`File is empty: ${filePath}`);
       }
-      
+
       console.debug(`[audio] verified file exists: ${filePath} (${stats.size} bytes)`);
 
       // Update state
       manager.setPlayingState(sampleId, filePath);
 
       console.debug(`[audio] launching afplay with file: ${filePath}`);
-      
+
       // Use afplay to play the audio file
       // Escape the path properly for shell: escape single quotes, backslashes, and wrap in single quotes
       // This handles spaces, special characters, and prevents injection
       const escapedPath = filePath.replace(/'/g, "'\\''");
       const command = `afplay '${escapedPath}'`;
-      
+
       return new Promise<void>((resolve, reject) => {
         const process = exec(command, (error, stdout, stderr) => {
           // Process completed (either finished playing or was killed)
@@ -185,7 +191,7 @@ export async function playAudio(audioUrl: string, sampleId: string, sampleName: 
           } else {
             console.debug(`[audio] afplay finished playing`);
           }
-          
+
           // Clear playback state when done
           if (manager.getCurrentSampleId() === sampleId) {
             manager.cleanup();
@@ -216,7 +222,9 @@ export async function playAudio(audioUrl: string, sampleId: string, sampleName: 
         }, 50);
       });
     } catch (error) {
-      console.debug(`[audio] playback failed: sampleId=${sampleId} - ${error instanceof Error ? error.message : "Unknown error"}`);
+      console.debug(
+        `[audio] playback failed: sampleId=${sampleId} - ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
       // Update global state to stop playing
       manager.cleanup();
       throw error;
@@ -230,14 +238,14 @@ export async function playAudio(audioUrl: string, sampleId: string, sampleName: 
 export async function stopAudio(): Promise<void> {
   const manager = PlaybackStateManager.getInstance();
   const currentSampleId = manager.getCurrentSampleId();
-  
+
   if (currentSampleId) {
     console.debug(`[audio] stopAudio requested: sampleId=${currentSampleId}`);
   } else {
     console.debug(`[audio] stopAudio requested: no audio currently playing`);
     return;
   }
-  
+
   // Cleanup will handle killing the process
   manager.cleanup();
   console.debug(`[audio] stopAudio completed: sampleId=${currentSampleId}`);

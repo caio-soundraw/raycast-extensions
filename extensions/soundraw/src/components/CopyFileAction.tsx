@@ -40,4 +40,3 @@ export function CopyFileAction({ sample, onLoadingChange }: CopyFileActionProps)
 
   return <Action title="Copy Audio File" icon={Icon.Clipboard} onAction={handleCopyAudioFile} />;
 }
-

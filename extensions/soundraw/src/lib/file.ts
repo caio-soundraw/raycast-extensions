@@ -35,7 +35,6 @@ export function sanitizeFileName(name: string): string {
   return name.replace(/[^a-zA-Z0-9\s-]/g, "_").replace(/\s+/g, "_");
 }
 
-
 /**
  * Save file to /tmp directory with sanitized filename
  * Reuses existing temp file if it already exists (from Play action, for example)
@@ -51,7 +50,7 @@ export function saveToDownloads(
   fileName: string,
   buffer: Buffer,
   contentType: string | null = null,
-  tempDir: string = "/tmp"
+  tempDir: string = "/tmp",
 ): string {
   const sanitizedName = sanitizeFileName(fileName);
   const extension = getFileExtension(contentType, url);
@@ -67,7 +66,7 @@ export function saveToDownloads(
       console.debug(`[file] file already exists, reusing: ${filename} at ${filePath}`);
       return filePath;
     }
-    
+
     // Write file and ensure it's fully synced to disk
     const fd = fs.openSync(filePath, "w");
     try {
@@ -78,7 +77,9 @@ export function saveToDownloads(
     }
     console.debug(`[file] saved successfully: ${filename} at ${filePath}`);
   } catch (writeError) {
-    console.debug(`[file] failed to save: ${filename} - ${writeError instanceof Error ? writeError.message : "Unknown error"}`);
+    console.debug(
+      `[file] failed to save: ${filename} - ${writeError instanceof Error ? writeError.message : "Unknown error"}`,
+    );
     // Clean up partial file if it exists
     try {
       if (fs.existsSync(filePath)) {
@@ -100,7 +101,7 @@ export function saveToDownloads(
 export function copyFileToClipboard(filePath: string): void {
   // Sanitize path for AppleScript (escape special characters)
   const sanitizedPath = filePath.replace(/"/g, '\\"');
-  
+
   try {
     execSync(`osascript -e 'set the clipboard to (POSIX file "${sanitizedPath}")'`);
   } catch {
@@ -123,22 +124,20 @@ export function writeTempFile(
   url: string,
   contentType: string | null = null,
   tempDir: string = "/tmp",
-  customFileName?: string
+  customFileName?: string,
 ): string {
   const extension = getFileExtension(contentType, url);
-  const tempFileName = customFileName 
-    ? `${customFileName}.${extension}`
-    : `soundraw_${Date.now()}.${extension}`;
+  const tempFileName = customFileName ? `${customFileName}.${extension}` : `soundraw_${Date.now()}.${extension}`;
   const tempFilePath = `${tempDir}/${tempFileName}`;
-  
+
   // Check if file already exists (from previous Play action, for example)
   if (fs.existsSync(tempFilePath)) {
     console.debug(`[file] temp file already exists, reusing: ${tempFileName} at ${tempFilePath}`);
     return tempFilePath;
   }
-  
+
   console.debug(`[file] writing temp file: ${tempFileName} (${buffer.length} bytes) at ${tempFilePath}`);
-  
+
   // Write file and ensure it's fully synced to disk to prevent race conditions
   const fd = fs.openSync(tempFilePath, "w");
   try {
@@ -147,9 +146,9 @@ export function writeTempFile(
   } finally {
     fs.closeSync(fd);
   }
-  
+
   console.debug(`[file] temp file created and synced: ${tempFileName} at ${tempFilePath}`);
-  
+
   return tempFilePath;
 }
 
@@ -164,21 +163,20 @@ export function writeTempFile(
 export async function getOrDownloadFile(
   url: string,
   tempDir: string = "/tmp",
-  customFileName?: string
+  customFileName?: string,
 ): Promise<{ path: string; contentType: string | null }> {
   console.debug(`[file] getOrDownloadFile: ${url} (tempDir: ${tempDir}, customFileName: ${customFileName || "none"})`);
-  
+
   // Download and cache (uses cache if available)
   const { buffer, contentType } = await downloadAndCache(url);
-  
+
   console.debug(`[file] got buffer: ${buffer.length} bytes (contentType: ${contentType || "unknown"})`);
-  
+
   // Sanitize custom filename if provided
   const sanitizedFileName = customFileName ? sanitizeFileName(customFileName) : undefined;
-  
+
   // Create temp file for QuickTime Player (will reuse if already exists)
   const tempFilePath = writeTempFile(buffer, url, contentType, tempDir, sanitizedFileName);
 
   return { path: tempFilePath, contentType };
 }
-

@@ -18,7 +18,7 @@ export function urlToHash(url: string): string {
 export async function getCachedFilePath(url: string, cacheFilePath: string): Promise<string | null> {
   const hash = urlToHash(url);
   const fullPath = `${cacheFilePath}/${hash}`;
-  
+
   try {
     const fs = await import("fs");
     if (fs.existsSync(fullPath)) {
@@ -27,7 +27,6 @@ export async function getCachedFilePath(url: string, cacheFilePath: string): Pro
   } catch {
     // File doesn't exist or error reading
   }
-  
+
   return null;
 }
-

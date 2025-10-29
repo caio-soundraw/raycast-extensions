@@ -34,7 +34,7 @@ export function isCached(url: string): boolean {
 export function getCached(url: string): Buffer | null {
   const key = urlToHash(url);
   const cached = cache.get(key);
-  
+
   if (cached) {
     try {
       // Convert base64 string back to Buffer
@@ -48,7 +48,7 @@ export function getCached(url: string): Buffer | null {
       return null;
     }
   }
-  
+
   console.debug(`[cache] miss (get): soundraw-samples key=${key}`);
   return null;
 }

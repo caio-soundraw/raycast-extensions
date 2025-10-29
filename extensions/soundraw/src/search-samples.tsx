@@ -75,7 +75,9 @@ function SamplesList({
         await playAudio(selectedSample.sample, selectedSample.id, selectedSample.name);
       }
     } catch (error) {
-      console.debug(`[audio] failed to auto-play selected sample: ${error instanceof Error ? error.message : "Unknown error"}`);
+      console.debug(
+        `[audio] failed to auto-play selected sample: ${error instanceof Error ? error.message : "Unknown error"}`,
+      );
       // Don't show toast for auto-play failures, just log
     }
   };
