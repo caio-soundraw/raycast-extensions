@@ -1,6 +1,7 @@
 import { Action, Icon, showToast, Toast, showHUD } from "@raycast/api";
 import { downloadAndCache } from "../../lib/cache";
 import { saveToDownloads, copyFileToClipboard } from "../../lib/file";
+import { stopAudio } from "../../lib/audio";
 import { Sample } from "../../lib/types";
 
 interface CopyFileActionProps {
@@ -10,6 +11,9 @@ interface CopyFileActionProps {
 
 export function CopyFileAction({ sample, onLoadingChange }: CopyFileActionProps) {
   const handleCopyAudioFile = async () => {
+    // Stop any currently playing audio
+    await stopAudio();
+
     onLoadingChange?.(true);
 
     try {
