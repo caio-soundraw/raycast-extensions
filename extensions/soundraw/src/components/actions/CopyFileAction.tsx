@@ -1,7 +1,7 @@
 import { Action, Icon, showToast, Toast, showHUD } from "@raycast/api";
-import { downloadAndCache } from "../lib/cache";
-import { saveToDownloads, copyFileToClipboard } from "../lib/file";
-import { Sample } from "../lib/types";
+import { downloadAndCache } from "../../lib/cache";
+import { saveToDownloads, copyFileToClipboard } from "../../lib/file";
+import { Sample } from "../../lib/types";
 
 interface CopyFileActionProps {
   sample: Sample;

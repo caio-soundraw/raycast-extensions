@@ -1,5 +1,5 @@
 import { Action, Icon, Keyboard } from "@raycast/api";
-import { Sample } from "../lib/types";
+import { Sample } from "../../lib/types";
 
 interface OpenInBrowserActionProps {
   sample: Sample;

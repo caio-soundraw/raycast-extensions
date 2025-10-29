@@ -1,5 +1,5 @@
 import { Action, Icon } from "@raycast/api";
-import { Sample } from "../lib/types";
+import { Sample } from "../../lib/types";
 
 interface CopyUrlActionProps {
   sample: Sample;

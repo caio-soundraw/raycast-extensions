@@ -1,7 +1,7 @@
 import { Action, Icon, showToast, Toast } from "@raycast/api";
-import { playAudio, stopAudio } from "../lib/audio";
-import { usePlaybackState } from "../lib/hooks";
-import { Sample } from "../lib/types";
+import { playAudio, stopAudio } from "../../lib/audio";
+import { usePlaybackState } from "../../lib/hooks";
+import { Sample } from "../../lib/types";
 
 interface PlayStopActionProps {
   sample: Sample;

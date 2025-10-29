@@ -5,10 +5,10 @@ import { searchSamples, getAvailableGenres, SoundrawAPIError } from "./lib/sound
 import { Sample } from "./lib/types";
 import { usePlaybackState } from "./lib/hooks";
 import { cleanupPlayback, playAudio, stopAudio } from "./lib/audio";
-import { CopyFileAction } from "./components/CopyFileAction";
-import { CopyUrlAction } from "./components/CopyUrlAction";
-import { OpenInBrowserAction } from "./components/OpenInBrowserAction";
-import { PlayStopAction } from "./components/PlayStopAction";
+import { CopyFileAction } from "./components/actions/CopyFileAction";
+import { CopyUrlAction } from "./components/actions/CopyUrlAction";
+import { OpenInBrowserAction } from "./components/actions/OpenInBrowserAction";
+import { PlayStopAction } from "./components/actions/PlayStopAction";
 import { getOrDownloadFile, getExpectedFilePath } from "./lib/file";
 import * as fs from "fs";
 
