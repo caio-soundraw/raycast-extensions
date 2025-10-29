@@ -97,19 +97,10 @@ class PlaybackStateManager {
     }
 
     if (this.tempPath) {
-      console.debug(`[audio] cleaning up temp file: ${this.tempPath}`);
-      try {
-        if (fs.existsSync(this.tempPath)) {
-          fs.unlinkSync(this.tempPath);
-          console.debug(`[audio] temp file deleted: ${this.tempPath}`);
-        } else {
-          console.debug(`[audio] temp file does not exist: ${this.tempPath}`);
-        }
-      } catch (error) {
-        console.debug(
-          `[audio] failed to delete temp file: ${this.tempPath} - ${error instanceof Error ? error.message : "Unknown error"}`,
-        );
-      }
+      // Don't delete temp files immediately - they might be needed for drag and drop
+      // Files in /tmp with our naming pattern are safe to leave - they'll be reused or cleaned by OS
+      // Only log that we're clearing the reference
+      console.debug(`[audio] clearing temp file reference: ${this.tempPath} (file left for potential reuse)`);
       this.tempPath = undefined;
     }
     if (this.sampleId) {

@@ -179,3 +179,23 @@ export async function getOrDownloadFile(
 
   return { path: tempFilePath, contentType };
 }
+
+/**
+ * Get the expected file path for a sample (without downloading)
+ * This is useful for drag and drop - the file should already exist in /tmp
+ * @param url The sample URL
+ * @param sampleName The sample name
+ * @param tempDir Optional temp directory (defaults to /tmp)
+ * @returns The expected file path
+ */
+export function getExpectedFilePath(
+  url: string,
+  sampleName: string,
+  contentType: string | null = null,
+  tempDir: string = "/tmp",
+): string {
+  const sanitizedName = sanitizeFileName(sampleName);
+  const extension = getFileExtension(contentType, url);
+  const filename = `${sanitizedName}.${extension}`;
+  return `${tempDir}/${filename}`;
+}

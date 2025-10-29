@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { Form, ActionPanel, Action, showToast, List, Icon, Toast } from "@raycast/api";
-import { useForm } from "@raycast/utils";
+import { useForm, useCachedPromise } from "@raycast/utils";
 import { searchSamples, getAvailableGenres, SoundrawAPIError } from "./lib/soundraw";
 import { Sample } from "./lib/types";
 import { usePlaybackState } from "./lib/hooks";
@@ -9,14 +9,19 @@ import { CopyFileAction } from "./components/CopyFileAction";
 import { CopyUrlAction } from "./components/CopyUrlAction";
 import { OpenInBrowserAction } from "./components/OpenInBrowserAction";
 import { PlayStopAction } from "./components/PlayStopAction";
+import { getOrDownloadFile, getExpectedFilePath } from "./lib/file";
+import * as fs from "fs";
 
 type Values = {
   genres: string[];
 };
 
-function SampleItem({ sample }: { sample: Sample }) {
+function SampleItem({ sample, filePath }: { sample: Sample; filePath: string | null }) {
   const [isDownloading, setIsDownloading] = useState(false);
   const isPlaying = usePlaybackState(sample.id);
+
+  // Verify file exists before setting quickLook (files might not be ready yet)
+  const verifiedFilePath = filePath && fs.existsSync(filePath) ? filePath : null;
 
   return (
     <List.Item
@@ -26,6 +31,7 @@ function SampleItem({ sample }: { sample: Sample }) {
       subtitle={sample.bpm ? `${sample.bpm} BPM` : ""}
       icon={isDownloading ? Icon.Clock : isPlaying ? Icon.SpeakerOn : Icon.Music}
       accessories={[...(sample.bpm ? [{ text: `${sample.bpm} BPM`, icon: Icon.Clock }] : [])]}
+      quickLook={verifiedFilePath ? { path: verifiedFilePath } : undefined}
       actions={
         <ActionPanel>
           <CopyFileAction sample={sample} onLoadingChange={setIsDownloading} />
@@ -54,6 +60,91 @@ function SamplesList({
   const genreNames = selectedGenres.map((key) => availableGenres[key] || key).join(", ");
   const navigationTitle = genreNames ? `Search Samples: ${genreNames}` : "Search Samples";
   const selectedSampleIdRef = useRef<string | null>(null);
+  const [filePaths, setFilePaths] = useState<Record<string, string>>({});
+  const [isPreparingFiles, setIsPreparingFiles] = useState(false);
+
+  // Prepare all sample files for drag and drop when samples change
+  useEffect(() => {
+    let cancelled = false;
+
+    const prepareFiles = async () => {
+      if (samples.length === 0) {
+        setFilePaths({});
+        setIsPreparingFiles(false);
+        return;
+      }
+
+      setIsPreparingFiles(true);
+      console.debug(`[drag-drop] preparing ${samples.length} files for drag and drop`);
+
+      // Use Promise.allSettled to ensure all files are attempted even if some fail
+      const preparePromises = samples.map(async (sample) => {
+        try {
+          // Check if file already exists (from previous play/copy action)
+          const expectedPath = getExpectedFilePath(sample.sample, sample.name, null, "/tmp");
+          if (fs.existsSync(expectedPath)) {
+            // Verify file is readable and has content
+            const stats = fs.statSync(expectedPath);
+            if (stats.size > 0) {
+              console.debug(`[drag-drop] file exists: ${sample.name} (${stats.size} bytes)`);
+              return { sampleId: sample.id, path: expectedPath };
+            } else {
+              console.debug(`[drag-drop] file exists but is empty, re-downloading: ${sample.name}`);
+            }
+          }
+
+          // Download and cache if needed (uses cache if available)
+          const { path } = await getOrDownloadFile(sample.sample, "/tmp", sample.name);
+          
+          // Verify file was created successfully
+          if (fs.existsSync(path)) {
+            const stats = fs.statSync(path);
+            if (stats.size > 0) {
+              console.debug(`[drag-drop] file ready: ${sample.name} (${stats.size} bytes)`);
+              return { sampleId: sample.id, path };
+            } else {
+              console.debug(`[drag-drop] file created but is empty: ${sample.name}`);
+              return null;
+            }
+          } else {
+            console.debug(`[drag-drop] file was not created: ${sample.name}`);
+            return null;
+          }
+        } catch (error) {
+          console.debug(
+            `[drag-drop] failed to prepare file for ${sample.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
+          );
+          return null;
+        }
+      });
+
+      const results = await Promise.allSettled(preparePromises);
+      
+      if (cancelled) {
+        return;
+      }
+
+      // Build paths object from successful results
+      const paths: Record<string, string> = {};
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled" && result.value) {
+          paths[result.value.sampleId] = result.value.path;
+        } else if (result.status === "rejected") {
+          console.debug(`[drag-drop] promise rejected for sample ${samples[index]?.name}`);
+        }
+      });
+
+      setFilePaths(paths);
+      setIsPreparingFiles(false);
+      console.debug(`[drag-drop] prepared ${Object.keys(paths).length}/${samples.length} files`);
+    };
+
+    prepareFiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [samples]);
 
   const handleSelectionChange = async (selectedId: string | null) => {
     // If no selection or same sample, do nothing
@@ -84,7 +175,7 @@ function SamplesList({
 
   return (
     <List
-      isLoading={isLoading}
+      isLoading={isLoading || isPreparingFiles}
       navigationTitle={navigationTitle}
       searchBarAccessory={null}
       onSelectionChange={handleSelectionChange}
@@ -105,18 +196,16 @@ function SamplesList({
           }
         />
       ) : (
-        samples.map((sample) => <SampleItem key={sample.id} sample={sample} />)
+        samples.map((sample) => (
+          <SampleItem key={sample.id} sample={sample} filePath={filePaths[sample.id] || null} />
+        ))
       )}
     </List>
   );
 }
 
 export default function Command() {
-  const [isLoading, setIsLoading] = useState(false);
-  const [samples, setSamples] = useState<Sample[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
-  const [availableGenres, setAvailableGenres] = useState<Record<string, string>>({});
-  const [isLoadingGenres, setIsLoadingGenres] = useState(true);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
   // Cleanup playback on unmount
@@ -126,22 +215,19 @@ export default function Command() {
     };
   }, []);
 
-  // Fetch available genres on component mount
-  useEffect(() => {
-    const fetchGenres = async () => {
-      try {
-        const response = await getAvailableGenres();
-        setAvailableGenres(response.genres);
-      } catch {
-        // Set empty genres if API fails
-        setAvailableGenres({});
-      } finally {
-        setIsLoadingGenres(false);
-      }
-    };
+  const [isLoading, setIsLoading] = useState(false);
+  const [samples, setSamples] = useState<Sample[]>([]);
 
-    fetchGenres();
-  }, []);
+  // Fetch available genres using useCachedPromise (caches across command runs)
+  const { data: genresData, isLoading: isLoadingGenres } = useCachedPromise(
+    () => getAvailableGenres(),
+    [],
+    {
+      initialData: { genres: {}, total_count: 0 },
+    },
+  );
+
+  const availableGenres = genresData?.genres || {};
 
   const { handleSubmit, itemProps } = useForm<Values>({
     onSubmit: async (values) => {
