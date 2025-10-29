@@ -1,5 +1,5 @@
-import { runAppleScript } from "@raycast/utils";
 import * as fs from "fs";
+import { exec, ChildProcess } from "child_process";
 import { getOrDownloadFile } from "./file";
 
 /**
@@ -9,6 +9,7 @@ class PlaybackStateManager {
   private static instance: PlaybackStateManager;
   private sampleId: string | null = null;
   private tempPath: string | undefined = undefined;
+  private playbackProcess: ChildProcess | null = null;
   private listeners = new Set<(sampleId: string | null) => void>();
   private playbackQueue: Promise<void> = Promise.resolve();
 
@@ -39,6 +40,10 @@ class PlaybackStateManager {
 
   getCurrentTempPath(): string | undefined {
     return this.tempPath;
+  }
+
+  setPlaybackProcess(process: ChildProcess | null) {
+    this.playbackProcess = process;
   }
 
   setPlayingState(sampleId: string | null, tempPath?: string) {
@@ -76,6 +81,17 @@ class PlaybackStateManager {
   }
 
   cleanup() {
+    // Stop playback process if running
+    if (this.playbackProcess) {
+      console.debug(`[audio] killing playback process`);
+      try {
+        this.playbackProcess.kill("SIGTERM");
+        this.playbackProcess = null;
+      } catch (error) {
+        console.debug(`[audio] failed to kill playback process: ${error instanceof Error ? error.message : "Unknown error"}`);
+      }
+    }
+
     if (this.tempPath) {
       console.debug(`[audio] cleaning up temp file: ${this.tempPath}`);
       try {
@@ -106,7 +122,7 @@ class PlaybackStateManager {
 }
 
 /**
- * Play audio file using QuickTime Player
+ * Play audio file using afplay (built-in macOS command-line audio player)
  * @param audioUrl The URL of the audio file
  * @param sampleId The sample ID for state tracking
  * @param sampleName The sample name for creating the temp file
@@ -134,21 +150,40 @@ export async function playAudio(audioUrl: string, sampleId: string, sampleName: 
       // Update state
       manager.setPlayingState(sampleId, filePath);
 
-      // Sanitize path for AppleScript (escape special characters)
-      const sanitizedPath = filePath.replace(/"/g, '\\"');
+      console.debug(`[audio] launching afplay with file: ${filePath}`);
+      
+      // Use afplay to play the audio file
+      // afplay doesn't support looping directly, but we can add it with a loop
+      // For now, we'll play once (users can replay if needed)
+      // Quote the path to handle spaces and special characters
+      return new Promise<void>((resolve, reject) => {
+        const process = exec(`afplay "${filePath.replace(/"/g, '\\"')}"`, (error) => {
+          // Process completed (either finished playing or was killed)
+          if (error) {
+            // Only reject if it wasn't intentionally killed (SIGTERM)
+            if (error.signal !== "SIGTERM" && error.code !== null) {
+              console.debug(`[audio] afplay error: ${error.message}`);
+              reject(error);
+            } else {
+              console.debug(`[audio] afplay stopped (signal: ${error.signal})`);
+            }
+          } else {
+            console.debug(`[audio] afplay finished playing`);
+          }
+          
+          // Clear playback state when done
+          if (manager.getCurrentSampleId() === sampleId) {
+            manager.cleanup();
+          }
+        });
 
-      console.debug(`[audio] launching QuickTime Player with file: ${filePath}`);
-      // Use AppleScript to play the audio file in QuickTime Player
-      const appleScript = `tell application "QuickTime Player"
-        activate
-        open POSIX file "${sanitizedPath}"
-        set theMovie to front document
-        set looping of theMovie to true
-        play theMovie
-      end tell`;
+        // Store process reference
+        manager.setPlaybackProcess(process);
 
-      await runAppleScript(appleScript);
-      console.debug(`[audio] playback started successfully: sampleId=${sampleId}`);
+        // Resolve immediately when process starts (not when it finishes)
+        console.debug(`[audio] playback started successfully: sampleId=${sampleId}`);
+        resolve();
+      });
     } catch (error) {
       console.debug(`[audio] playback failed: sampleId=${sampleId} - ${error instanceof Error ? error.message : "Unknown error"}`);
       // Update global state to stop playing
@@ -172,25 +207,9 @@ export async function stopAudio(): Promise<void> {
     return;
   }
   
-  try {
-    console.debug(`[audio] sending stop command to QuickTime Player`);
-    // Use AppleScript to stop QuickTime Player
-    const stopScript = `tell application "QuickTime Player"
-      if (count of documents) > 0 then
-        close front document
-      end if
-    end tell`;
-
-    await runAppleScript(stopScript);
-    console.debug(`[audio] QuickTime Player stopped successfully`);
-  } catch (error) {
-    console.debug(`[audio] failed to stop QuickTime Player: ${error instanceof Error ? error.message : "Unknown error"}`);
-    // Continue cleanup even if stop fails
-  } finally {
-    // Clean up temp file and state
-    manager.cleanup();
-    console.debug(`[audio] stopAudio completed: sampleId=${currentSampleId}`);
-  }
+  // Cleanup will handle killing the process
+  manager.cleanup();
+  console.debug(`[audio] stopAudio completed: sampleId=${currentSampleId}`);
 }
 
 /**
