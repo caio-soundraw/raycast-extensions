@@ -31,7 +31,7 @@ export function PlayStopAction({ sample }: PlayStopActionProps) {
 
   return (
     <Action
-      title={isPlaying ? "Stop Sample" : "Play Sample"}
+      title={isPlaying ? "Stop" : "Play"}
       icon={isPlaying ? Icon.Stop : Icon.Play}
       onAction={handlePlay}
       shortcut={{ modifiers: ["cmd", "shift", "ctrl"], key: "p" }}

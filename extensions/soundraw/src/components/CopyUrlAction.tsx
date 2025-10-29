@@ -6,5 +6,5 @@ interface CopyUrlActionProps {
 }
 
 export function CopyUrlAction({ sample }: CopyUrlActionProps) {
-  return <Action.CopyToClipboard content={sample.sample} title="Copy Audio URL" icon={Icon.Link} />;
+  return <Action.CopyToClipboard content={sample.sample} title="Copy URL" icon={Icon.Link} />;
 }

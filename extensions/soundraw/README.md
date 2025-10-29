@@ -19,10 +19,10 @@ The Soundraw Raycast extension is currently in a closed beta. At this time, user
 
 ### Actions
 
-- Copy Audio File (via Downloads folder)
-- Copy Audio URL
+- Copy File
+- Copy URL
 - Open in Browser
-- Play/Stop Sample (via QuickTime Player)
+- Play/Stop (uses afplay)
 
 ## Author
 
