@@ -68,7 +68,14 @@ export function saveToDownloads(
       return filePath;
     }
     
-    fs.writeFileSync(filePath, buffer);
+    // Write file and ensure it's fully synced to disk
+    const fd = fs.openSync(filePath, "w");
+    try {
+      fs.writeSync(fd, buffer);
+      fs.fsyncSync(fd); // Force write to disk
+    } finally {
+      fs.closeSync(fd);
+    }
     console.debug(`[file] saved successfully: ${filename} at ${filePath}`);
   } catch (writeError) {
     console.debug(`[file] failed to save: ${filename} - ${writeError instanceof Error ? writeError.message : "Unknown error"}`);
@@ -132,9 +139,16 @@ export function writeTempFile(
   
   console.debug(`[file] writing temp file: ${tempFileName} (${buffer.length} bytes) at ${tempFilePath}`);
   
-  fs.writeFileSync(tempFilePath, buffer);
+  // Write file and ensure it's fully synced to disk to prevent race conditions
+  const fd = fs.openSync(tempFilePath, "w");
+  try {
+    fs.writeSync(fd, buffer);
+    fs.fsyncSync(fd); // Force write to disk
+  } finally {
+    fs.closeSync(fd);
+  }
   
-  console.debug(`[file] temp file created: ${tempFileName} at ${tempFilePath}`);
+  console.debug(`[file] temp file created and synced: ${tempFileName} at ${tempFilePath}`);
   
   return tempFilePath;
 }

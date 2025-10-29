@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Form, ActionPanel, Action, showToast, List, Icon, Toast } from "@raycast/api";
 import { useForm } from "@raycast/utils";
 import { searchSamples, getAvailableGenres, SoundrawAPIError } from "./lib/soundraw";
 import { Sample } from "./lib/types";
 import { usePlaybackState } from "./lib/hooks";
-import { cleanupPlayback } from "./lib/audio";
+import { cleanupPlayback, playAudio, stopAudio } from "./lib/audio";
 import { CopyFileAction } from "./components/CopyFileAction";
 import { CopyUrlAction } from "./components/CopyUrlAction";
 import { OpenInBrowserAction } from "./components/OpenInBrowserAction";
@@ -20,6 +20,7 @@ function SampleItem({ sample }: { sample: Sample }) {
 
   return (
     <List.Item
+      id={sample.id}
       key={sample.id}
       title={sample.name}
       subtitle={sample.bpm ? `${sample.bpm} BPM` : ""}
@@ -52,12 +53,39 @@ function SamplesList({
 }) {
   const genreNames = selectedGenres.map((key) => availableGenres[key] || key).join(", ");
   const navigationTitle = genreNames ? `Search Samples: ${genreNames}` : "Search Samples";
+  const selectedSampleIdRef = useRef<string | null>(null);
+
+  const handleSelectionChange = async (selectedId: string | null) => {
+    // If no selection or same sample, do nothing
+    if (!selectedId || selectedId === selectedSampleIdRef.current) {
+      return;
+    }
+
+    console.debug(`[audio] selection changed: ${selectedId} (was: ${selectedSampleIdRef.current})`);
+    selectedSampleIdRef.current = selectedId;
+
+    try {
+      // Stop currently playing sample
+      await stopAudio();
+
+      // Find the selected sample and play it
+      const selectedSample = samples.find((s) => s.id === selectedId);
+      if (selectedSample) {
+        console.debug(`[audio] auto-playing selected sample: ${selectedSample.name}`);
+        await playAudio(selectedSample.sample, selectedSample.id, selectedSample.name);
+      }
+    } catch (error) {
+      console.debug(`[audio] failed to auto-play selected sample: ${error instanceof Error ? error.message : "Unknown error"}`);
+      // Don't show toast for auto-play failures, just log
+    }
+  };
 
   return (
     <List
       isLoading={isLoading}
       navigationTitle={navigationTitle}
       searchBarAccessory={null}
+      onSelectionChange={handleSelectionChange}
       actions={
         <ActionPanel>
           <Action title="New Search" icon={Icon.MagnifyingGlass} onAction={onNewSearch} />

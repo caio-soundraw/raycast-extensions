@@ -147,22 +147,37 @@ export async function playAudio(audioUrl: string, sampleId: string, sampleName: 
       const { path: filePath } = await getOrDownloadFile(audioUrl, "/tmp", sampleName);
       console.debug(`[audio] file ready for playback: ${filePath}`);
 
+      // Verify file exists and is readable before launching afplay
+      // This prevents race conditions where the file isn't fully written yet
+      if (!fs.existsSync(filePath)) {
+        throw new Error(`File does not exist: ${filePath}`);
+      }
+      
+      const stats = fs.statSync(filePath);
+      if (stats.size === 0) {
+        throw new Error(`File is empty: ${filePath}`);
+      }
+      
+      console.debug(`[audio] verified file exists: ${filePath} (${stats.size} bytes)`);
+
       // Update state
       manager.setPlayingState(sampleId, filePath);
 
       console.debug(`[audio] launching afplay with file: ${filePath}`);
       
       // Use afplay to play the audio file
-      // afplay doesn't support looping directly, but we can add it with a loop
-      // For now, we'll play once (users can replay if needed)
-      // Quote the path to handle spaces and special characters
+      // Escape the path properly for shell: escape single quotes, backslashes, and wrap in single quotes
+      // This handles spaces, special characters, and prevents injection
+      const escapedPath = filePath.replace(/'/g, "'\\''");
+      const command = `afplay '${escapedPath}'`;
+      
       return new Promise<void>((resolve, reject) => {
-        const process = exec(`afplay "${filePath.replace(/"/g, '\\"')}"`, (error) => {
+        const process = exec(command, (error, stdout, stderr) => {
           // Process completed (either finished playing or was killed)
           if (error) {
             // Only reject if it wasn't intentionally killed (SIGTERM)
             if (error.signal !== "SIGTERM" && error.code !== null) {
-              console.debug(`[audio] afplay error: ${error.message}`);
+              console.debug(`[audio] afplay error: ${error.message}${stderr ? ` (stderr: ${stderr})` : ""}`);
               reject(error);
             } else {
               console.debug(`[audio] afplay stopped (signal: ${error.signal})`);
@@ -177,12 +192,28 @@ export async function playAudio(audioUrl: string, sampleId: string, sampleName: 
           }
         });
 
-        // Store process reference
+        // Store process reference immediately (before resolve) to prevent race conditions
         manager.setPlaybackProcess(process);
 
-        // Resolve immediately when process starts (not when it finishes)
-        console.debug(`[audio] playback started successfully: sampleId=${sampleId}`);
-        resolve();
+        // Verify process started successfully by checking stderr
+        // If there's an immediate error, stderr will contain it
+        process.once("error", (processError) => {
+          console.debug(`[audio] process spawn error: ${processError.message}`);
+          manager.setPlaybackProcess(null);
+          reject(processError);
+        });
+
+        // Resolve only after we've confirmed the process started
+        // Give it a tiny delay to catch immediate errors
+        setTimeout(() => {
+          if (process.killed) {
+            console.debug(`[audio] process was killed before starting`);
+            reject(new Error("Process was killed before starting"));
+          } else {
+            console.debug(`[audio] playback started successfully: sampleId=${sampleId}`);
+            resolve();
+          }
+        }, 50);
       });
     } catch (error) {
       console.debug(`[audio] playback failed: sampleId=${sampleId} - ${error instanceof Error ? error.message : "Unknown error"}`);
