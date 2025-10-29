@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
-import { Form, ActionPanel, Action, showToast, List, Detail, Icon, useNavigation, Toast, showHUD } from "@raycast/api";
+import { Form, ActionPanel, Action, showToast, List, Detail, Icon, Toast, showHUD } from "@raycast/api";
 import * as fs from "fs";
 import { execSync } from "child_process";
 import { useForm } from "@raycast/utils";
 import { runAppleScript } from "run-applescript";
 import { searchSamples, getAvailableGenres, SoundrawAPIError } from "./lib/soundraw";
-import { hasValidConfig } from "./lib/storage";
 import { SearchSamplesRequest, Sample } from "./lib/types";
 
 type Values = {
@@ -300,18 +299,11 @@ export default function Command() {
   const [hasSearched, setHasSearched] = useState(false);
   const [availableGenres, setAvailableGenres] = useState<Record<string, string>>({});
   const [isLoadingGenres, setIsLoadingGenres] = useState(true);
-  const { push } = useNavigation();
 
   // Fetch available genres on component mount
   useEffect(() => {
     const fetchGenres = async () => {
       try {
-        const configExists = await hasValidConfig();
-        if (!configExists) {
-          setIsLoadingGenres(false);
-          return;
-        }
-
         const response = await getAvailableGenres();
         setAvailableGenres(response.genres);
       } catch (error) {
@@ -329,18 +321,6 @@ export default function Command() {
   const { handleSubmit, itemProps } = useForm<Values>({
     onSubmit: async (values) => {
       const { genres } = values;
-
-      // Check if configuration is set up
-      const configExists = await hasValidConfig();
-      if (!configExists) {
-        await showToast({
-          title: "No API Configuration",
-          message: "Please set up your Soundraw API configuration first",
-          style: Toast.Style.Failure,
-        });
-        push("setup-token");
-        return;
-      }
 
       setIsLoading(true);
       setHasSearched(true);

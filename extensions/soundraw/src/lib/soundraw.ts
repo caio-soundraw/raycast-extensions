@@ -1,5 +1,9 @@
-import { getSoundrawToken, getSoundrawApiBaseUrl } from "./storage";
 import { SearchSamplesRequest, SearchSamplesResponse } from "./types";
+import { getPreferenceValues } from "@raycast/api";
+
+const preferences = getPreferenceValues<Preferences>();
+const soundrawToken = preferences.soundrawToken;
+const soundrawApiUrl = preferences.soundrawApiUrl;
 
 export class SoundrawAPIError extends Error {
   constructor(
@@ -13,21 +17,10 @@ export class SoundrawAPIError extends Error {
 }
 
 async function makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-  const token = await getSoundrawToken();
-  const apiBaseUrl = await getSoundrawApiBaseUrl();
-
-  if (!token) {
-    throw new SoundrawAPIError("No API token found. Please set up your token first.");
-  }
-
-  if (!apiBaseUrl) {
-    throw new SoundrawAPIError("No API base URL found. Please set up your configuration first.");
-  }
-
-  const url = `${apiBaseUrl}${endpoint}`;
+  const url = `${soundrawApiUrl}${endpoint}`;
   const headers = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${soundrawToken}`,
     ...options.headers,
   };
 
@@ -63,9 +56,11 @@ export async function searchSamples(params: SearchSamplesRequest): Promise<Searc
       queryParams.append("genres[]", genre);
     });
   }
+
   if (params.page) {
     queryParams.append("page", params.page.toString());
   }
+
   if (params.limit) {
     queryParams.append("limit", params.limit.toString());
   }

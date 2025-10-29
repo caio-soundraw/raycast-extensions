@@ -19,16 +19,28 @@
   "license": "MIT",
   "commands": [
     {
-      "name": "setup-token",
-      "title": "Setup Token",
-      "description": "Configure your token",
-      "mode": "view"
-    },
-    {
       "name": "search-samples",
       "title": "Search Samples",
       "description": "Search for samples",
       "mode": "view"
+    }
+  ],
+  "preferences": [
+    {
+      "name": "soundrawToken",
+      "title": "API Token",
+      "description": "Your Soundraw API token",
+      "type": "textfield",
+      "placeholder": "8bf36ea4-6e85-4c46-814a-eb9c5676b03d",
+      "required": true
+    },
+    {
+      "name": "soundrawApiUrl",
+      "title": "API Url",
+      "description": "Your Soundraw API URL",
+      "type": "textfield",
+      "placeholder": "https://api.example.com/api/v1",
+      "required": true
     }
   ],
   "dependencies": {
