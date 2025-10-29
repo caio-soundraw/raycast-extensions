@@ -175,7 +175,6 @@ export async function getOrDownloadFile(
   // Sanitize custom filename if provided
   const sanitizedFileName = customFileName ? sanitizeFileName(customFileName) : undefined;
 
-  // Create temp file for QuickTime Player (will reuse if already exists)
   const tempFilePath = writeTempFile(buffer, url, contentType, tempDir, sanitizedFileName);
 
   return { path: tempFilePath, contentType };
