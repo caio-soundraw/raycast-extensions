@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { List, Icon, ActionPanel, Action } from "@raycast/api";
 import { Sample } from "../lib/types";
-import { playAudio, stopAudio } from "../lib/audio";
+import { playAudio, stopAudio, cleanupPlayback } from "../lib/audio";
 import { getOrDownloadFile, getExpectedFilePath } from "../lib/file";
 import { SampleItem } from "./SampleItem";
 import * as fs from "fs";
@@ -107,6 +107,13 @@ export function SamplesList({
       cancelled = true;
     };
   }, [samples]);
+
+  // Cleanup audio playback when this component unmounts
+  useEffect(() => {
+    return () => {
+      cleanupPlayback();
+    };
+  }, []);
 
   const handleSelectionChange = async (selectedId: string | null) => {
     // If no selection or same sample, do nothing
