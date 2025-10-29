@@ -4,7 +4,7 @@
   "title": "Soundraw",
   "description": "Interact with Soundraw to increase your music creation productivity",
   "icon": "soundraw.png",
-  "author": "caio-soundraw",
+  "author": "clins1994",
   "owner": "soundraw",
   "access": "public",
   "platforms": [
@@ -30,7 +30,7 @@
       "name": "soundrawToken",
       "title": "API Token",
       "description": "Your Soundraw API token",
-      "type": "textfield",
+      "type": "password",
       "placeholder": "8bf36ea4-6e85-4c46-814a-eb9c5676b03d",
       "required": true
     },
