@@ -1,9 +1,7 @@
 import { SearchSamplesRequest, SearchSamplesResponse } from "./types";
 import { getPreferenceValues } from "@raycast/api";
 
-const preferences = getPreferenceValues<Preferences>();
-const soundrawToken = preferences.soundrawToken;
-const soundrawApiUrl = preferences.soundrawApiUrl;
+const { soundrawToken, soundrawApiUrl } = getPreferenceValues<Preferences>();
 
 export class SoundrawAPIError extends Error {
   constructor(

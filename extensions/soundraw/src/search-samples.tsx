@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Form, ActionPanel, Action, showToast, List, Detail, Icon, Toast, showHUD } from "@raycast/api";
+import { Form, ActionPanel, Action, showToast, List, Detail, Icon, Toast, showHUD, Keyboard } from "@raycast/api";
 import * as fs from "fs";
 import { execSync } from "child_process";
-import { useForm } from "@raycast/utils";
-import { runAppleScript } from "run-applescript";
+import { useForm, runAppleScript } from "@raycast/utils";
 import { searchSamples, getAvailableGenres, SoundrawAPIError } from "./lib/soundraw";
 import { SearchSamplesRequest, Sample } from "./lib/types";
 
@@ -220,7 +219,7 @@ function SampleItem({ sample }: { sample: Sample }) {
         <ActionPanel>
           <Action title="Copy Audio File" icon={Icon.Clipboard} onAction={handleCopyAudioFile} />
           <Action.CopyToClipboard content={sample.sample} title="Copy Audio URL" />
-          <Action.OpenInBrowser url={sample.sample} title="Open in Browser" />
+          <Action.OpenInBrowser url={sample.sample} title="Open in Browser" shortcut={Keyboard.Shortcut.Common.Open} />
           {!isPlaying ? (
             <Action
               title="Play Sample"
@@ -246,39 +245,22 @@ function SamplesList({
   samples,
   isLoading,
   onNewSearch,
+  selectedGenres,
+  availableGenres,
 }: {
   samples: Sample[];
   isLoading: boolean;
   onNewSearch: () => void;
+  selectedGenres: string[];
+  availableGenres: Record<string, string>;
 }) {
-  if (isLoading) {
-    return (
-      <List>
-        <List.Item
-          title="Searching for samples..."
-          subtitle="Please wait while we find matching samples"
-          icon={Icon.Clock}
-        />
-      </List>
-    );
-  }
-
-  if (samples.length === 0) {
-    return (
-      <Detail
-        markdown="No samples found matching your criteria. Try adjusting your search parameters."
-        actions={
-          <ActionPanel>
-            <Action title="Try Different Search" />
-          </ActionPanel>
-        }
-      />
-    );
-  }
+  const genreNames = selectedGenres.map((key) => availableGenres[key] || key).join(", ");
+  const navigationTitle = genreNames ? `Search Samples: ${genreNames}` : "Search Samples";
 
   return (
     <List
-      searchBarPlaceholder="Search completed"
+      isLoading={isLoading}
+      navigationTitle={navigationTitle}
       searchBarAccessory={null}
       actions={
         <ActionPanel>
@@ -286,9 +268,19 @@ function SamplesList({
         </ActionPanel>
       }
     >
-      {samples.map((sample) => (
-        <SampleItem key={sample.id} sample={sample} />
-      ))}
+      {!isLoading && samples.length === 0 ? (
+        <List.EmptyView
+          title="No samples found"
+          description="No samples found matching your criteria. Try adjusting your search parameters."
+          actions={
+            <ActionPanel>
+              <Action title="Try Different Search" onAction={onNewSearch} />
+            </ActionPanel>
+          }
+        />
+      ) : (
+        samples.map((sample) => <SampleItem key={sample.id} sample={sample} />)
+      )}
     </List>
   );
 }
@@ -299,6 +291,7 @@ export default function Command() {
   const [hasSearched, setHasSearched] = useState(false);
   const [availableGenres, setAvailableGenres] = useState<Record<string, string>>({});
   const [isLoadingGenres, setIsLoadingGenres] = useState(true);
+  const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
 
   // Fetch available genres on component mount
   useEffect(() => {
@@ -324,6 +317,7 @@ export default function Command() {
 
       setIsLoading(true);
       setHasSearched(true);
+      setSelectedGenres(genres || []);
 
       try {
         const searchParams: SearchSamplesRequest = {
@@ -334,10 +328,6 @@ export default function Command() {
 
         const response = await searchSamples(searchParams);
         setSamples(response.samples);
-
-        await showToast({
-          title: "Search Complete",
-        });
       } catch (error) {
         const errorMessage =
           error instanceof SoundrawAPIError ? error.message : "Failed to search samples. Please try again.";
@@ -364,10 +354,19 @@ export default function Command() {
   const handleNewSearch = () => {
     setHasSearched(false);
     setSamples([]);
+    setSelectedGenres([]);
   };
 
   if (hasSearched) {
-    return <SamplesList samples={samples} isLoading={isLoading} onNewSearch={handleNewSearch} />;
+    return (
+      <SamplesList
+        samples={samples}
+        isLoading={isLoading}
+        onNewSearch={handleNewSearch}
+        selectedGenres={selectedGenres}
+        availableGenres={availableGenres}
+      />
+    );
   }
 
   return (
@@ -375,7 +374,7 @@ export default function Command() {
       isLoading={isLoading || isLoadingGenres}
       actions={
         <ActionPanel>
-          <Action.SubmitForm onSubmit={handleSubmit} title="Search Samples" />
+          <Action.SubmitForm onSubmit={handleSubmit} title="Search Samples" icon={Icon.MagnifyingGlass} />
         </ActionPanel>
       }
     >
