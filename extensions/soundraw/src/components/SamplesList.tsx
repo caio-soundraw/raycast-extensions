@@ -5,6 +5,7 @@ import { playAudio, stopAudio, cleanupPlayback } from "../lib/audio";
 import { getOrDownloadFile, getExpectedFilePath } from "../lib/file";
 import { SampleItem } from "./SampleItem";
 import * as fs from "fs";
+import { log } from "../lib/log";
 
 export function SamplesList({
   samples,
@@ -37,7 +38,7 @@ export function SamplesList({
       }
 
       setIsPreparingFiles(true);
-      console.debug(`[drag-drop] preparing ${samples.length} files for drag and drop`);
+      log.debug(`[drag-drop] preparing ${samples.length} files for drag and drop`);
 
       // Use Promise.allSettled to ensure all files are attempted even if some fail
       const preparePromises = samples.map(async (sample) => {
@@ -48,10 +49,10 @@ export function SamplesList({
             // Verify file is readable and has content
             const stats = fs.statSync(expectedPath);
             if (stats.size > 0) {
-              console.debug(`[drag-drop] file exists: ${sample.name} (${stats.size} bytes)`);
+              log.debug(`[drag-drop] file exists: ${sample.name} (${stats.size} bytes)`);
               return { sampleId: sample.id, path: expectedPath };
             } else {
-              console.debug(`[drag-drop] file exists but is empty, re-downloading: ${sample.name}`);
+              log.debug(`[drag-drop] file exists but is empty, re-downloading: ${sample.name}`);
             }
           }
 
@@ -62,18 +63,18 @@ export function SamplesList({
           if (fs.existsSync(path)) {
             const stats = fs.statSync(path);
             if (stats.size > 0) {
-              console.debug(`[drag-drop] file ready: ${sample.name} (${stats.size} bytes)`);
+              log.debug(`[drag-drop] file ready: ${sample.name} (${stats.size} bytes)`);
               return { sampleId: sample.id, path };
             } else {
-              console.debug(`[drag-drop] file created but is empty: ${sample.name}`);
+              log.debug(`[drag-drop] file created but is empty: ${sample.name}`);
               return null;
             }
           } else {
-            console.debug(`[drag-drop] file was not created: ${sample.name}`);
+            log.debug(`[drag-drop] file was not created: ${sample.name}`);
             return null;
           }
         } catch (error) {
-          console.debug(
+          log.debug(
             `[drag-drop] failed to prepare file for ${sample.name}: ${error instanceof Error ? error.message : "Unknown error"}`,
           );
           return null;
@@ -92,13 +93,13 @@ export function SamplesList({
         if (result.status === "fulfilled" && result.value) {
           paths[result.value.sampleId] = result.value.path;
         } else if (result.status === "rejected") {
-          console.debug(`[drag-drop] promise rejected for sample ${samples[index]?.name}`);
+          log.debug(`[drag-drop] promise rejected for sample ${samples[index]?.name}`);
         }
       });
 
       setFilePaths(paths);
       setIsPreparingFiles(false);
-      console.debug(`[drag-drop] prepared ${Object.keys(paths).length}/${samples.length} files`);
+      log.debug(`[drag-drop] prepared ${Object.keys(paths).length}/${samples.length} files`);
     };
 
     prepareFiles();
@@ -121,7 +122,7 @@ export function SamplesList({
       return;
     }
 
-    console.debug(`[audio] selection changed: ${selectedId} (was: ${selectedSampleIdRef.current})`);
+    log.debug(`[audio] selection changed: ${selectedId} (was: ${selectedSampleIdRef.current})`);
     selectedSampleIdRef.current = selectedId;
 
     try {
@@ -131,11 +132,11 @@ export function SamplesList({
       // Find the selected sample and play it
       const selectedSample = samples.find((s) => s.id === selectedId);
       if (selectedSample) {
-        console.debug(`[audio] auto-playing selected sample: ${selectedSample.name}`);
+        log.debug(`[audio] auto-playing selected sample: ${selectedSample.name}`);
         await playAudio(selectedSample.sample, selectedSample.id, selectedSample.name);
       }
     } catch (error) {
-      console.debug(
+      log.debug(
         `[audio] failed to auto-play selected sample: ${error instanceof Error ? error.message : "Unknown error"}`,
       );
       // Don't show toast for auto-play failures, just log

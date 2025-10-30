@@ -1,5 +1,6 @@
 import { Cache } from "@raycast/api";
 import { urlToHash } from "./hash";
+import { log } from "./log";
 
 /**
  * Cache instance for storing audio files
@@ -19,9 +20,9 @@ export function isCached(url: string): boolean {
   const key = urlToHash(url);
   const has = cache.has(key);
   if (has) {
-    console.debug(`[cache] hit (has): soundraw-samples key=${key}`);
+    log.debug(`[cache] hit (has): soundraw-samples key=${key}`);
   } else {
-    console.debug(`[cache] miss (has): soundraw-samples key=${key}`);
+    log.debug(`[cache] miss (has): soundraw-samples key=${key}`);
   }
   return has;
 }
@@ -39,17 +40,17 @@ export function getCached(url: string): Buffer | null {
     try {
       // Convert base64 string back to Buffer
       const buf = Buffer.from(cached, "base64");
-      console.debug(`[cache] hit (get): soundraw-samples key=${key} bytes=${buf.length}`);
+      log.debug(`[cache] hit (get): soundraw-samples key=${key} bytes=${buf.length}`);
       return buf;
     } catch {
       // Invalid cached data, remove it
       cache.remove(key);
-      console.debug(`[cache] invalid entry removed: soundraw-samples key=${key}`);
+      log.debug(`[cache] invalid entry removed: soundraw-samples key=${key}`);
       return null;
     }
   }
 
-  console.debug(`[cache] miss (get): soundraw-samples key=${key}`);
+  log.debug(`[cache] miss (get): soundraw-samples key=${key}`);
   return null;
 }
 
@@ -71,13 +72,13 @@ export async function downloadAndCache(url: string): Promise<{ buffer: Buffer; c
   // Check cache first
   const cached = getCachedData(url);
   if (cached) {
-    console.debug(`[cache] using cached data for download: ${url}`);
+    log.debug(`[cache] using cached data for download: ${url}`);
     // We don't have content-type from cache, but that's okay
     return { buffer: cached, contentType: null };
   }
 
   // Download the file
-  console.debug(`[cache] downloading and caching: ${url}`);
+  log.debug(`[cache] downloading and caching: ${url}`);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch file: ${response.statusText}`);
@@ -103,5 +104,5 @@ export function saveToCache(url: string, data: Buffer): void {
   // Convert Buffer to base64 string for storage
   const base64String = data.toString("base64");
   cache.set(key, base64String);
-  console.debug(`[cache] set: soundraw-samples key=${key} bytes=${data.length}`);
+  log.debug(`[cache] set: soundraw-samples key=${key} bytes=${data.length}`);
 }

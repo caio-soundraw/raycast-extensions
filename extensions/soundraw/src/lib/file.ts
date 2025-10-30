@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import { execSync } from "child_process";
 import { downloadAndCache } from "./cache";
+import { log } from "./log";
 
 /**
  * Get file extension from Content-Type header or URL
@@ -57,13 +58,13 @@ export function saveToDownloads(
   const filename = `${sanitizedName}.${extension}`;
   const filePath = `${tempDir}/${filename}`;
 
-  console.debug(`[file] saving to temp directory: ${filename} (${buffer.length} bytes) at ${filePath}`);
+  log.debug(`[file] saving to temp directory: ${filename} (${buffer.length} bytes) at ${filePath}`);
 
   // Write file with error recovery
   try {
     // If file already exists, we can reuse it
     if (fs.existsSync(filePath)) {
-      console.debug(`[file] file already exists, reusing: ${filename} at ${filePath}`);
+      log.debug(`[file] file already exists, reusing: ${filename} at ${filePath}`);
       return filePath;
     }
 
@@ -75,9 +76,9 @@ export function saveToDownloads(
     } finally {
       fs.closeSync(fd);
     }
-    console.debug(`[file] saved successfully: ${filename} at ${filePath}`);
+    log.debug(`[file] saved successfully: ${filename} at ${filePath}`);
   } catch (writeError) {
-    console.debug(
+    log.debug(
       `[file] failed to save: ${filename} - ${writeError instanceof Error ? writeError.message : "Unknown error"}`,
     );
     // Clean up partial file if it exists
@@ -132,11 +133,11 @@ export function writeTempFile(
 
   // Check if file already exists (from previous Play action, for example)
   if (fs.existsSync(tempFilePath)) {
-    console.debug(`[file] temp file already exists, reusing: ${tempFileName} at ${tempFilePath}`);
+    log.debug(`[file] temp file already exists, reusing: ${tempFileName} at ${tempFilePath}`);
     return tempFilePath;
   }
 
-  console.debug(`[file] writing temp file: ${tempFileName} (${buffer.length} bytes) at ${tempFilePath}`);
+  log.debug(`[file] writing temp file: ${tempFileName} (${buffer.length} bytes) at ${tempFilePath}`);
 
   // Write file and ensure it's fully synced to disk to prevent race conditions
   const fd = fs.openSync(tempFilePath, "w");
@@ -147,7 +148,7 @@ export function writeTempFile(
     fs.closeSync(fd);
   }
 
-  console.debug(`[file] temp file created and synced: ${tempFileName} at ${tempFilePath}`);
+  log.debug(`[file] temp file created and synced: ${tempFileName} at ${tempFilePath}`);
 
   return tempFilePath;
 }
@@ -165,12 +166,12 @@ export async function getOrDownloadFile(
   tempDir: string = "/tmp",
   customFileName?: string,
 ): Promise<{ path: string; contentType: string | null }> {
-  console.debug(`[file] getOrDownloadFile: ${url} (tempDir: ${tempDir}, customFileName: ${customFileName || "none"})`);
+  log.debug(`[file] getOrDownloadFile: ${url} (tempDir: ${tempDir}, customFileName: ${customFileName || "none"})`);
 
   // Download and cache (uses cache if available)
   const { buffer, contentType } = await downloadAndCache(url);
 
-  console.debug(`[file] got buffer: ${buffer.length} bytes (contentType: ${contentType || "unknown"})`);
+  log.debug(`[file] got buffer: ${buffer.length} bytes (contentType: ${contentType || "unknown"})`);
 
   // Sanitize custom filename if provided
   const sanitizedFileName = customFileName ? sanitizeFileName(customFileName) : undefined;
