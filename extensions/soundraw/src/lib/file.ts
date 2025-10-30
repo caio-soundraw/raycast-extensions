@@ -200,3 +200,43 @@ export function getExpectedFilePath(
   const filename = `${sanitizedName}.${extension}`;
   return `${tempDir}/${filename}`;
 }
+
+/**
+ * Remove temp files created by this extension that are older than maxAgeMs
+ * Only targets files starting with the "soundraw_" prefix and common audio extensions
+ * This is safe because our `writeTempFile` uses that prefix by default.
+ */
+export function cleanupOldTempFiles(tempDir: string = "/tmp", maxAgeMs: number = 4 * 60 * 60 * 1000): void {
+  try {
+    const now = Date.now();
+    const entries = fs.readdirSync(tempDir, { withFileTypes: true });
+
+    const audioExtensions = new Set(["mp3", "m4a", "wav", "webm", "ogg", "aac", "flac"]);
+
+    for (const entry of entries) {
+      if (!entry.isFile()) continue;
+      const name = entry.name;
+
+      // Match files created by this extension via writeTempFile("soundraw_...")
+      if (!name.startsWith("soundraw_")) continue;
+
+      const dotIndex = name.lastIndexOf(".");
+      const ext = dotIndex > -1 ? name.slice(dotIndex + 1).toLowerCase() : "";
+      if (!audioExtensions.has(ext)) continue;
+
+      const filePath = `${tempDir}/${name}`;
+      try {
+        const stats = fs.statSync(filePath);
+        const ageMs = now - stats.mtimeMs;
+        if (ageMs > maxAgeMs) {
+          fs.unlinkSync(filePath);
+          log.debug(`[file] cleaned old temp file: ${filePath}`);
+        }
+      } catch {
+        // Ignore per-file errors
+      }
+    }
+  } catch {
+    // Ignore cleanup errors overall
+  }
+}

@@ -5,6 +5,7 @@ import { searchSamples, getAvailableGenres, SoundrawAPIError } from "./lib/sound
 import { Sample } from "./lib/types";
 import { cleanupPlayback } from "./lib/audio";
 import { SamplesList } from "./components/SamplesList";
+import { cleanupOldTempFiles } from "./lib/file";
 
 type Values = {
   genres: string[];
@@ -13,6 +14,12 @@ type Values = {
 export default function Command() {
   const [hasSearched, setHasSearched] = useState(false);
   const [selectedGenres, setSelectedGenres] = useState<string[]>([]);
+
+  // Cleanup old temp files on command launch (older than 4 hours)
+  useEffect(() => {
+    const fourHoursMs = 4 * 60 * 60 * 1000;
+    cleanupOldTempFiles("/tmp", fourHoursMs);
+  }, []);
 
   // Cleanup playback on unmount
   useEffect(() => {
